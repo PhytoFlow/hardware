@@ -57,5 +57,5 @@ void loop() {
   Serial.print(", Temperatura Solo: ");
   Serial.println(temperaturaSolo);
 
-  delay(1000);
+  delay(5000);
 }
