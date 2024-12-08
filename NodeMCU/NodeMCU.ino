@@ -13,7 +13,7 @@ WiFiUDP udp;
 // Variáveis para armazenar os dados recebidos
 String dataReceived = "";
 
-const String identity = "NodeMCU";  // Identidade do dispositivo NodeMCU
+const String identity = "A1";  // Identidade do dispositivo NodeMCU
 
 void setup() {
   Serial.begin(9600);    // Porta serial do NodeMCU (com Arduino)
@@ -62,8 +62,11 @@ void loop() {
     Serial.println("Dados recebidos do arduino: ");
     Serial.println(dataReceived);
 
+    // Adiciona o identificador (identity) à mensagem antes de enviar
+    String messageToSend = + "Identificador: " + identity + ", " + dataReceived;
+
     udp.beginPacket(esp32IP.c_str(), porta);
-    udp.write(dataReceived.c_str());
+    udp.write(messageToSend.c_str());
     udp.endPacket();
   }
 
