@@ -14,6 +14,9 @@ WiFiUDP udp;
 // Variáveis para armazenar os dados recebidos
 char incomingPacket[255];
 
+// Endereço de Broadcast
+IPAddress broadcastIP;
+
 void setup() {
   Serial.begin(9600);
 
@@ -27,6 +30,10 @@ void setup() {
 
   // Inicia o servidor UDP
   udp.begin(porta);
+
+  // Calcula o endereço de broadcast
+  broadcastIP = WiFi.localIP();
+  broadcastIP[3] = 255;  // Broadcast na última parte do IP da rede
 }
 
 void loop() {
@@ -40,8 +47,19 @@ void loop() {
     }
 
     // Exibe os dados recebidos no monitor serial
-    Serial.print("Dados recebidos do NodeMCU: ");
+    Serial.print("Dados recebidos: ");
     Serial.println(incomingPacket);
+
+    // Se o pacote recebido for uma solicitação de "descoberta"
+    if (String(incomingPacket) == "DESCUBRA_ESP32") {
+      // Responde com o IP do ESP32
+      String esp32IP = WiFi.localIP().toString(); // IP do ESP32 como string
+      udp.beginPacket(udp.remoteIP(), udp.remotePort());
+
+      // Envia o IP como bytes (não é necessário converter explicitamente para uint8_t*)
+      udp.write(reinterpret_cast<const uint8_t*>(esp32IP.c_str()), esp32IP.length()); // Passa a string como uint8_t*
+      udp.endPacket();
+    }
   }
 
   delay(100); // Para evitar sobrecarga
