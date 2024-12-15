@@ -29,33 +29,44 @@ void setup() {
   dht.begin();
   sensors.begin();
 
-  Serial.begin(9600);
+  Serial.begin(9600); // Comunicação com o NodeMCU
 }
 
 void loop() {
-  temperatura = dht.readTemperature();
-  umidade = dht.readHumidity();
+  // Verifica se há solicitação do NodeMCU
+  if (Serial.available() > 0) {
 
-  sensors.requestTemperatures();
-  float temperaturaSolo = sensors.getTempCByIndex(0);
+    String comando = Serial.readStringUntil("\n");
+    comando.trim();
 
-  int qntLuz = analogRead(pino_luz);
-  int leituraUmidadeSolo = analogRead(pino_umidade_solo);
-  int qntLuzUV = analogRead(pino_UV);
+    if(comando == "DADOS"){
+      // Captura os dados dos sensores
+      temperatura = dht.readTemperature();
+      umidade = dht.readHumidity();
 
-  float umidadeSoloPercentual = map(leituraUmidadeSolo, soloSeco, soloUmido, 0, 100);
-  umidadeSoloPercentual = constrain(umidadeSoloPercentual, 0, 100);
+      sensors.requestTemperatures();
+      float temperaturaSolo = sensors.getTempCByIndex(0);
 
-  Serial.print("Temperatura: ");
-  Serial.print(temperatura);
-  Serial.print(", Umidade: ");
-  Serial.print(umidade);
-  Serial.print(", Umidade Solo: ");
-  Serial.print(umidadeSoloPercentual);
-  Serial.print(", Intensidade UV: ");
-  Serial.print(qntLuzUV);
-  Serial.print(", Temperatura Solo: ");
-  Serial.println(temperaturaSolo);
+      int qntLuz = analogRead(pino_luz);
+      int leituraUmidadeSolo = analogRead(pino_umidade_solo);
+      int qntLuzUV = analogRead(pino_UV);
 
-  delay(1000);
+      float umidadeSoloPercentual = map(leituraUmidadeSolo, soloSeco, soloUmido, 0, 100);
+      umidadeSoloPercentual = constrain(umidadeSoloPercentual, 0, 100);
+
+      // Formata os dados em uma string
+      String dados = "Temperatura: " + String(temperatura) +
+                    ", Umidade: " + String(umidade) +
+                    ", Umidade Solo: " + String(umidadeSoloPercentual) +
+                    ", Intensidade UV: " + String(qntLuzUV) +
+                    ", Temperatura Solo: " + String(temperaturaSolo);
+
+      // Envia os dados ao NodeMCU
+      Serial.println(dados);
+
+      while (Serial.available() > 0) {
+        Serial.read();
+      }
+    }
+  }
 }
