@@ -1,5 +1,7 @@
 #include <WiFi.h>
 #include <WiFiUdp.h>
+#include <WiFiClientSecure.h>
+#include <PubSubClient.h>
 #include <ArduinoJson.h>
 
 // Defina os dados da sua rede Wi-Fi
@@ -27,6 +29,57 @@ const unsigned long tempoEspera = 5000;
 // Cria um objeto JSON para armazenar as respostas
 DynamicJsonDocument respostaJson(2048); // Espaço maior para o JSON
 
+// AWS IoT Core configuração
+const char* awsEndpoint = "awxktv65yt674-ats.iot.us-east-1.amazonaws.com";
+const int awsPort = 8883;
+const char* publishTopic = "irrigation/gateway/status";
+
+// Certificados e chaves
+const char* rootCA = R"EOF(
+-----BEGIN CERTIFICATE-----
+
+-----END CERTIFICATE-----
+)EOF";
+
+const char* certificatePemCrt = R"EOF(
+-----BEGIN CERTIFICATE-----
+
+-----END CERTIFICATE-----
+)EOF";
+
+const char* privatePemKey = R"EOF(
+-----BEGIN RSA PRIVATE KEY-----
+
+-----END RSA PRIVATE KEY-----
+)EOF";
+
+WiFiClientSecure secureClient;
+PubSubClient mqttClient(secureClient);
+
+void connectAWS() {
+  secureClient.setCACert(rootCA);
+  secureClient.setCertificate(certificatePemCrt);
+  secureClient.setPrivateKey(privatePemKey);
+
+  mqttClient.setServer(awsEndpoint, awsPort);
+  mqttClient.setKeepAlive(240); // Aumenta o keep-alive para evitar desconexão
+
+  // Tentando a conexão
+  while (!mqttClient.connected()) {
+    Serial.println("Conectando ao AWS IoT Core...");
+    // Usando um clientID único
+    String clientID = "irrigation-gateway-000";  // Ou o clientID que você configurou
+    if (mqttClient.connect(clientID.c_str())) {
+      Serial.println("Conectado ao AWS IoT Core!");
+    } else {
+      Serial.print("Falha na conexão. Estado MQTT: ");
+      Serial.println(mqttClient.state());
+      delay(2000); // Dê mais tempo para a reconexão
+    }
+  }
+}
+
+
 void setup() {
   Serial.begin(9600);
 
@@ -49,6 +102,9 @@ void setup() {
 
   // Cria o array de respostas no JSON
   respostaJson.createNestedArray("respostas");
+
+  // Conecta ao AWS IoT Core
+  connectAWS();
 }
 
 void loop() {
@@ -120,14 +176,26 @@ void loop() {
       }
     }
 
-    // Converte o JSON para string para visualização ou envio
+    // Converte o JSON para string para envio
     String jsonString;
     serializeJson(jsonFormatado, jsonString);
     Serial.println("Respostas formatadas em JSON:");
     Serial.println(jsonString);
 
-    // Aqui você pode enviar o JSON para a AWS via MQTT ou HTTP, por exemplo.
+    // Publica o JSON no tópico MQTT
+    if (!mqttClient.publish(publishTopic, jsonString.c_str())) {
+      Serial.print("Falha ao publicar no tópico MQTT. Estado MQTT: ");
+      Serial.println(mqttClient.state());
+      Serial.print("Tópico: ");
+      Serial.println(publishTopic);
+      Serial.print("Payload: ");
+      Serial.println(jsonString);
+    } else {
+      Serial.println("Dados publicados no AWS IoT com sucesso.");
+    }
   }
 
+  // Mantém a conexão MQTT
+  mqttClient.loop();
   delay(10);
 }
