@@ -2,23 +2,25 @@
 #include <WiFiUdp.h>
 
 const char* ssid = "Gabriel_Castro";
-const char* password = "qwertyui";
+const char* password = "senha";
 
-// Porta UDP para comunicação com o ESP32
+// Porta UDP para comunicação
 const int porta = 8080;
 
 // Inicializa o servidor UDP
 WiFiUDP udp;
 
-// Variáveis para armazenar os dados recebidos
-String dataReceived = "";
-
+// Identidade do dispositivo
 const String identity = "A1";  // Identidade do dispositivo NodeMCU
 
-void setup() {
-  Serial.begin(9600);    // Porta serial do NodeMCU (com Arduino)
-  Serial1.begin(9600);   // Porta serial para comunicação com o Arduino (pode ser outra taxa)
+// Variáveis
+char incomingPacket[255]; // Buffer para dados recebidos
+String comandoRecebido;
 
+void setup() {
+  Serial.begin(9600);
+
+  // Conectando-se à rede Wi-Fi
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
@@ -26,49 +28,66 @@ void setup() {
   }
   Serial.println("Conectado à rede Wi-Fi!");
 
+  // Inicia o servidor UDP
   udp.begin(porta);
-
-  // Envia pacote de broadcast para descobrir o ESP32
-  IPAddress broadcastIP = WiFi.localIP();
-  broadcastIP[3] = 255;  // Endereço de broadcast
-
-  // Envia uma mensagem de "descoberta" para o ESP32
-  udp.beginPacket(broadcastIP, porta);
-  udp.write("DESCUBRA_ESP32");
-  udp.endPacket();
 }
 
 void loop() {
-  // Aguarda a resposta do ESP32 (IP)
+  // Verifica se há pacotes UDP recebidos
   int packetSize = udp.parsePacket();
-
-  String esp32IP = "";
-
   if (packetSize) {
-    char incomingPacket[255];
     int len = udp.read(incomingPacket, sizeof(incomingPacket));
     if (len > 0) {
-      incomingPacket[len] = 0;
+      incomingPacket[len] = 0; // Garante que a string seja terminada corretamente
     }
+    comandoRecebido = String(incomingPacket);
 
-    // Recebe o IP do ESP32
-    esp32IP = String(incomingPacket);
-    Serial.print("IP do ESP32 recebido: ");
-    Serial.println(esp32IP);
+    if (comandoRecebido == "DADOS") {
+
+      String respostaArduino = SolicitarDadosArduino(comandoRecebido);
+      EnviarDadosESP32(respostaArduino);
+
+    } else {
+      // Placeholder para outros comandos futuros
+      Serial.print("Comando não reconhecido: ");
+      Serial.println(comandoRecebido);
+    }
   }
 
-  if(Serial.available() > 0){
-    dataReceived = Serial.readStringUntil('\n');
-    Serial.println("Dados recebidos do arduino: ");
-    Serial.println(dataReceived);
+  delay(10);
+}
+
+String SolicitarDadosArduino(String comando){
+  String respostaArduino = "";
+
+  Serial.println("DADOS"); // Solicita dados ao arduino
+
+  // Aguarda resposta do Arduino
+  long startTime = millis();
+  while (millis() - startTime < 3000) {
+    if (Serial.available() > 0) {
+      respostaArduino = Serial.readStringUntil('\n');
+      break;
+    }
+  }
+
+  return respostaArduino;
+}
+
+void EnviarDadosESP32(String respostaArduino){
+  if (respostaArduino != "") {
+    Serial.print("Resposta do Arduino: ");
+    Serial.println(respostaArduino);
 
     // Adiciona o identificador (identity) à mensagem antes de enviar
-    String messageToSend = + "Identificador: " + identity + ", " + dataReceived;
+    String messageToSend = "Identificador: " + identity + ", " + respostaArduino;
 
-    udp.beginPacket(esp32IP.c_str(), porta);
+    // Envia a resposta de volta ao ESP32
+    udp.beginPacket(udp.remoteIP(), udp.remotePort());
     udp.write(messageToSend.c_str());
     udp.endPacket();
-  }
 
-  delay(100);
+  } else {
+    Serial.println("Erro: Nenhuma resposta do Arduino.");
+  }
 }
