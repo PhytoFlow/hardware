@@ -159,21 +159,27 @@ void loop() {
       // Variáveis temporárias para armazenar os valores extraídos
       char identificador[16];
       float temperatura, umidade, umidade_solo, temperatura_solo;
-      int intensidade_uv;
+      int intensidade_uv, intensidade_luz;
 
       // Extração dos valores com sscanf
-      if (sscanf(dado.c_str(), "Identificador: %[^,], Temperatura: %f, Umidade: %f, Umidade Solo: %f, Intensidade UV: %d, Temperatura Solo: %f",
-                identificador, &temperatura, &umidade, &umidade_solo, &intensidade_uv, &temperatura_solo) == 6) {
+      if (sscanf(dado.c_str(), "Identificador: %[^,], Temperatura: %f, Umidade: %f, Umidade_Solo: %f, Intensidade_Luz: %d, Intensidade_UV: %d, Temperatura_Solo: %f",
+                identificador, &temperatura, &umidade, &umidade_solo, &intensidade_luz, &intensidade_uv, &temperatura_solo) == 7) {
         // Cria um objeto JSON para cada resposta formatada
         JsonObject item = respostasFormatadas.createNestedObject();
-        item["identificador"] = identificador;
-        JsonObject valores = item.createNestedObject("valores");
-        valores["temperatura"] = temperatura;
-        valores["umidade"] = umidade;
-        valores["umidade_solo"] = umidade_solo;
-        valores["intensidade_uv"] = intensidade_uv;
-        valores["temperatura_solo"] = temperatura_solo;
+        item["identifier"] = identificador;
+        JsonObject valores = item.createNestedObject("values");
+        valores["temperature"] = temperatura;
+        valores["humidity"] = umidade;
+        valores["soil_humidity"] = umidade_solo;
+        valores["light"] = intensidade_luz;
+        valores["uv_intensity"] = intensidade_uv;
+        valores["soil_temperature"] = temperatura_solo;
       }
+    }
+
+    if (mqttClient.state() != MQTT_CONNECTED) {
+      Serial.println("Conexão MQTT perdida. Tentando reconectar...");
+      connectAWS();  // Reconectar
     }
 
     // Converte o JSON para string para envio
