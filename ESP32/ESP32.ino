@@ -18,7 +18,7 @@ WiFiUDP udp;
 IPAddress broadcastIP;
 
 // Botão para iniciar a comunicação 
-const int botaoPin = 4;
+const int botaoPinSolicitarDados = 4;
 
 // Variáveis
 char incomingPacket[255]; // Buffer para dados recebidos
@@ -83,7 +83,7 @@ void connectAWS() {
 void setup() {
   Serial.begin(9600);
 
-  pinMode(botaoPin, INPUT_PULLUP);
+  pinMode(botaoPinSolicitarDados, INPUT_PULLUP);
 
   // Conectando-se à rede Wi-Fi
   WiFi.begin(ssid, password);
@@ -109,7 +109,7 @@ void setup() {
 
 void loop() {
   // Verifica se o botão foi pressionado
-  if (digitalRead(botaoPin) == LOW && !botaoPressionado) {
+  if (digitalRead(botaoPinSolicitarDados) == LOW && !botaoPressionado) {
     botaoPressionado = true;
     tempoInicial = millis();
 
