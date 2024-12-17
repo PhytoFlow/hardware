@@ -60,12 +60,45 @@ void messageReceived(char* topic, byte* payload, unsigned int length) {
   Serial.print("Mensagem recebida no tópico: ");
   Serial.println(topic);
 
-  Serial.print("Dados recebidos: ");
+  // Cria uma string a partir do payload
+  String payloadString;
   for (unsigned int i = 0; i < length; i++) {
-    Serial.print((char)payload[i]);
+    payloadString += (char)payload[i];
   }
-  Serial.println();
+
+  // Parseia o JSON recebido
+  DynamicJsonDocument doc(1024);
+  DeserializationError error = deserializeJson(doc, payloadString);
+
+  // Verifica erros no parse
+  if (error) {
+    Serial.print("Erro ao parsear JSON: ");
+    Serial.println(error.c_str());
+    return;
+  }
+
+  // Valida se os campos esperados estão presentes
+  if (doc.containsKey("identifier") && doc.containsKey("comand") && doc.containsKey("time")) {
+    const char* identifier = doc["identifier"];
+    const char* comand = doc["comand"];
+    unsigned long time = doc["time"];
+
+    Serial.println("Identificador: " + String(identifier));
+    Serial.println("Comando: " + String(comand));
+    Serial.println("Tempo: " + String(time));
+
+    // Verifica se o comando é "AGOAR"
+    if (strcmp(comand, "AGOAR") == 0) {
+      Serial.println("Executando o comando AGOAR...");
+      // Aqui será implementado o procedimento
+    } else {
+      Serial.println("Comando não reconhecido.");
+    }
+  } else {
+    Serial.println("JSON recebido não contém os campos esperados.");
+  }
 }
+
 
 void connectAWS() {
   secureClient.setCACert(rootCA);
