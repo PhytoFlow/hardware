@@ -56,25 +56,41 @@ const char* privatePemKey = R"EOF(
 WiFiClientSecure secureClient;
 PubSubClient mqttClient(secureClient);
 
+void messageReceived(char* topic, byte* payload, unsigned int length) {
+  Serial.print("Mensagem recebida no tópico: ");
+  Serial.println(topic);
+
+  Serial.print("Dados recebidos: ");
+  for (unsigned int i = 0; i < length; i++) {
+    Serial.print((char)payload[i]);
+  }
+  Serial.println();
+}
+
 void connectAWS() {
   secureClient.setCACert(rootCA);
   secureClient.setCertificate(certificatePemCrt);
   secureClient.setPrivateKey(privatePemKey);
 
   mqttClient.setServer(awsEndpoint, awsPort);
-  mqttClient.setKeepAlive(240); // Aumenta o keep-alive para evitar desconexão
+  mqttClient.setCallback(messageReceived); // Configura o callback
 
   // Tentando a conexão
   while (!mqttClient.connected()) {
     Serial.println("Conectando ao AWS IoT Core...");
-    // Usando um clientID único
-    String clientID = "irrigation-gateway-000";  // Ou o clientID que você configurou
+    String clientID = "irrigation-gateway-000";  // Usando um clientID único
     if (mqttClient.connect(clientID.c_str())) {
       Serial.println("Conectado ao AWS IoT Core!");
+      // Inscreve-se no tópico após a conexão
+      if (mqttClient.subscribe("irrigation/control/000/command")) {
+        Serial.println("Inscrito no tópico: irrigation/control/000/command");
+      } else {
+        Serial.println("Falha ao inscrever no tópico.");
+      }
     } else {
       Serial.print("Falha na conexão. Estado MQTT: ");
       Serial.println(mqttClient.state());
-      delay(2000); // Dê mais tempo para a reconexão
+      delay(2000); // Aguarde antes de tentar novamente
     }
   }
 }
