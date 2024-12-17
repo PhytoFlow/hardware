@@ -57,9 +57,10 @@ void loop() {
       // Formata os dados em uma string
       String dados = "Temperatura: " + String(temperatura) +
                     ", Umidade: " + String(umidade) +
-                    ", Umidade Solo: " + String(umidadeSoloPercentual) +
-                    ", Intensidade UV: " + String(qntLuzUV) +
-                    ", Temperatura Solo: " + String(temperaturaSolo);
+                    ", Umidade_Solo: " + String(umidadeSoloPercentual) +
+                    ", Intensidade_Luz: " + String(qntLuz) +
+                    ", Intensidade_UV: " + String(qntLuzUV) +
+                    ", Temperatura_Solo: " + String(temperaturaSolo);
 
       // Envia os dados ao NodeMCU
       Serial.println(dados);

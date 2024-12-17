@@ -1,26 +1,24 @@
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
+#include <ArduinoJson.h>
 
 const char* ssid = "Gabriel_Castro";
 const char* password = "senha";
 
-// Porta UDP para comunicação
 const int porta = 8080;
 
-// Inicializa o servidor UDP
 WiFiUDP udp;
 
-// Identidade do dispositivo
-const String identity = "A1";  // Identidade do dispositivo NodeMCU
+const String identity = "A1";
 
-// Variáveis
-char incomingPacket[255]; // Buffer para dados recebidos
+char incomingPacket[255];
 String comandoRecebido;
+
+const int pinoAgoar = D8;
 
 void setup() {
   Serial.begin(9600);
 
-  // Conectando-se à rede Wi-Fi
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
@@ -28,17 +26,18 @@ void setup() {
   }
   Serial.println("Conectado à rede Wi-Fi!");
 
-  // Inicia o servidor UDP
   udp.begin(porta);
+
+  pinMode(pinoAgoar, OUTPUT);
+  digitalWrite(pinoAgoar, LOW);
 }
 
 void loop() {
-  // Verifica se há pacotes UDP recebidos
   int packetSize = udp.parsePacket();
   if (packetSize) {
     int len = udp.read(incomingPacket, sizeof(incomingPacket));
     if (len > 0) {
-      incomingPacket[len] = 0; // Garante que a string seja terminada corretamente
+      incomingPacket[len] = 0;
     }
     comandoRecebido = String(incomingPacket);
 
@@ -47,10 +46,28 @@ void loop() {
       String respostaArduino = SolicitarDadosArduino(comandoRecebido);
       EnviarDadosESP32(respostaArduino);
 
+    } else if(comandoRecebido == "IDENTIFIQUE-SE") {
+        String respostaIdentificacao = String("Identifier: ") + identity +
+                                              ", IP: " + WiFi.localIP().toString();
+        udp.beginPacket(udp.remoteIP(), udp.remotePort());
+        udp.write(respostaIdentificacao.c_str());
+        udp.endPacket();
+        Serial.println("Resposta de IDENTIFIQUE-SE enviada.");
     } else {
-      // Placeholder para outros comandos futuros
-      Serial.print("Comando não reconhecido: ");
-      Serial.println(comandoRecebido);
+      DynamicJsonDocument doc(1024);
+      DeserializationError error = deserializeJson(doc, comandoRecebido);
+
+      if (!error) {
+        const char* comand = doc["comand"];
+        if (comand && String(comand) == "AGOAR") {
+          int tempo = doc["time"];
+          if (tempo > 0) {
+            AgoarSetor(tempo);
+          }
+        }
+      } else {
+        Serial.println("Erro ao processar JSON.");
+      }
     }
   }
 
@@ -90,4 +107,17 @@ void EnviarDadosESP32(String respostaArduino){
   } else {
     Serial.println("Erro: Nenhuma resposta do Arduino.");
   }
+}
+
+void AgoarSetor(int tempo) {
+  // Ativa a "semeadura" (buzzer)
+  digitalWrite(pinoAgoar, HIGH);
+  Serial.println("Agoar ativado!");
+
+  // Aguarda pelo tempo especificado
+  delay(tempo);
+
+  // Desativa a "semeadura" (buzzer)
+  digitalWrite(pinoAgoar, LOW);
+  Serial.println("Agoar desativado.");
 }
