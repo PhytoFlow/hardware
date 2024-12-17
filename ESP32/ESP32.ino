@@ -56,49 +56,93 @@ const char* privatePemKey = R"EOF(
 WiFiClientSecure secureClient;
 PubSubClient mqttClient(secureClient);
 
+String identificarNodemcusNaRede(const char* identifierRecebido) {
+  Serial.println("Enviando comando IDENTIFIQUE-SE para os dispositivos na rede...");
+
+  respostaJson["respostas"].clear();
+
+  udp.beginPacket(broadcastIP, porta);
+  udp.write((const uint8_t*)"IDENTIFIQUE-SE", strlen("IDENTIFIQUE-SE"));
+  udp.endPacket();
+
+  unsigned long tempoEsperaRespostas = millis() + 3000;
+  String ipDoDispositivoEncontrado = "";
+
+  while (millis() < tempoEsperaRespostas) {
+    int packetSize = udp.parsePacket();
+    if (packetSize) {
+      int len = udp.read(incomingPacket, sizeof(incomingPacket));
+      if (len > 0) {
+        incomingPacket[len] = 0;
+      }
+
+      String resposta = String(incomingPacket);
+
+      int idxIdentifier = resposta.indexOf("Identifier: ");
+      int idxIP = resposta.indexOf("IP: ");
+      
+      if (idxIdentifier != -1 && idxIP != -1) {
+        String identifier = resposta.substring(idxIdentifier + 12, idxIdentifier + 14);
+        String ip = resposta.substring(idxIP + 4);
+
+        if (identifier.length() == 2 && ip.length() > 0) {
+
+          if (identifier == identifierRecebido) {
+            return ip;
+          }
+        } else {
+          Serial.println("Formato de resposta inválido para o Identifier ou IP.");
+        }
+      } else {
+        Serial.println("Resposta não contém os campos 'Identifier' ou 'IP'.");
+      }
+    }
+  }
+
+  return "DISPOSITIVO_NAO_ENCONTRADO";
+}
+
 void messageReceived(char* topic, byte* payload, unsigned int length) {
   Serial.print("Mensagem recebida no tópico: ");
   Serial.println(topic);
 
-  // Cria uma string a partir do payload
   String payloadString;
   for (unsigned int i = 0; i < length; i++) {
     payloadString += (char)payload[i];
   }
 
-  // Parseia o JSON recebido
   DynamicJsonDocument doc(1024);
   DeserializationError error = deserializeJson(doc, payloadString);
 
-  // Verifica erros no parse
   if (error) {
     Serial.print("Erro ao parsear JSON: ");
     Serial.println(error.c_str());
     return;
   }
 
-  // Valida se os campos esperados estão presentes
   if (doc.containsKey("identifier") && doc.containsKey("comand") && doc.containsKey("time")) {
     const char* identifier = doc["identifier"];
     const char* comand = doc["comand"];
     unsigned long time = doc["time"];
 
-    Serial.println("Identificador: " + String(identifier));
-    Serial.println("Comando: " + String(comand));
-    Serial.println("Tempo: " + String(time));
-
-    // Verifica se o comando é "AGOAR"
     if (strcmp(comand, "AGOAR") == 0) {
-      Serial.println("Executando o comando AGOAR...");
-      // Aqui será implementado o procedimento
+
+      String IPNodeMcu = identificarNodemcusNaRede(identifier);
+
+      if (IPNodeMcu == "DISPOSITIVO_NAO_ENCONTRADO") {
+        Serial.println("Dispositivo não encontrado com o Identificador: " + String(identifier));
+      } else {
+        Serial.println("IP do NodeMCU encontrado: " + IPNodeMcu);
+      }
+
     } else {
       Serial.println("Comando não reconhecido.");
     }
+
   } else {
     Serial.println("JSON recebido não contém os campos esperados.");
   }
 }
-
 
 void connectAWS() {
   secureClient.setCACert(rootCA);
