@@ -47,10 +47,15 @@ void loop() {
       String respostaArduino = SolicitarDadosArduino(comandoRecebido);
       EnviarDadosESP32(respostaArduino);
 
-    } else {
-      // Placeholder para outros comandos futuros
-      Serial.print("Comando não reconhecido: ");
-      Serial.println(comandoRecebido);
+    } else if(comandoRecebido == "IDENTIFIQUE-SE") {
+        String respostaIdentificacao = String("Identifier: ") + identity +
+                                              ", IP: " + WiFi.localIP().toString();
+        udp.beginPacket(udp.remoteIP(), udp.remotePort());
+        udp.write(respostaIdentificacao.c_str());
+        udp.endPacket();
+        Serial.println("Resposta de IDENTIFIQUE-SE enviada.");
+    }else{
+      Serial.println("O comando " + comandoRecebido + " não foi reconhecido");
     }
   }
 
