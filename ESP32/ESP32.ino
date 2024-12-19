@@ -17,12 +17,8 @@ WiFiUDP udp;
 // Endereço de Broadcast
 IPAddress broadcastIP;
 
-// Botão para iniciar a comunicação 
-const int botaoPinSolicitarDados = 4;
-
 // Variáveis
 char incomingPacket[255]; // Buffer para dados recebidos
-bool botaoPressionado = false;
 unsigned long tempoInicial;
 const unsigned long tempoEspera = 5000;
 
@@ -186,8 +182,6 @@ void connectAWS() {
 void setup() {
   Serial.begin(9600);
 
-  pinMode(botaoPinSolicitarDados, INPUT_PULLUP);
-
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
@@ -205,41 +199,44 @@ void setup() {
   connectAWS();
 }
 
-void loop() {
-  if (digitalRead(botaoPinSolicitarDados) == LOW && !botaoPressionado) {
-    botaoPressionado = true;
-    tempoInicial = millis();
+unsigned long tempoUltimoEnvio = 0;
+unsigned long intervaloEnvio = 120000;
+bool coletaEmProgresso = false;
+unsigned long tempoColetaInicio = 0;
 
+void loop() {
+  unsigned long tempoAtual = millis();
+
+  if (!coletaEmProgresso && (tempoAtual - tempoUltimoEnvio >= intervaloEnvio)) {
     respostaJson["respostas"].clear();
 
-    Serial.print("Botão apertado");
-
-    // Envia comando de solicitação de dados para todos os dispositivos
     udp.beginPacket(broadcastIP, porta);
     udp.write((const uint8_t*)"DADOS", strlen("DADOS"));
     udp.endPacket();
 
     Serial.println("Comando DADOS enviado para todos os dispositivos.");
+
+    tempoColetaInicio = tempoAtual;
+    coletaEmProgresso = true;
   }
 
-  // Aguarda e processa respostas
-  if (botaoPressionado && millis() - tempoInicial <= tempoEspera) {
+  if (coletaEmProgresso && (tempoAtual - tempoColetaInicio <= tempoEspera)) {
     int packetSize = udp.parsePacket();
     if (packetSize) {
       int len = udp.read(incomingPacket, sizeof(incomingPacket));
       if (len > 0) {
-        incomingPacket[len] = 0; // Garante que a string seja terminada corretamente
+        incomingPacket[len] = 0;
       }
 
       String resposta = String(incomingPacket);
-
       respostaJson["respostas"].add(resposta);
 
       Serial.print("Resposta recebida: ");
       Serial.println(resposta);
     }
-  } else if (botaoPressionado && millis() - tempoInicial > tempoEspera) {
-    botaoPressionado = false;
+  }
+
+  if (coletaEmProgresso && (tempoAtual - tempoColetaInicio > tempoEspera)) {
     Serial.println("Tempo de coleta de respostas encerrado.");
 
     JsonArray respostas = respostaJson["respostas"].as<JsonArray>();
@@ -247,30 +244,30 @@ void loop() {
     JsonArray respostasFormatadas = jsonFormatado.to<JsonArray>();
 
     for (JsonVariant resposta : respostas) {
-        String dado = resposta.as<String>();
+      String dado = resposta.as<String>();
 
-        char identificador[16];
-        float temperatura, umidade, umidade_solo, temperatura_solo;
-        int intensidade_uv, intensidade_luz;
+      char identificador[16];
+      float temperatura, umidade, umidade_solo, temperatura_solo;
+      int intensidade_uv, intensidade_luz;
 
-        if (sscanf(dado.c_str(), "Identificador: %[^,], Temperatura: %f, Umidade: %f, Umidade_Solo: %f, Intensidade_Luz: %d, Intensidade_UV: %d, Temperatura_Solo: %f",
-                   identificador, &temperatura, &umidade, &umidade_solo, &intensidade_luz, &intensidade_uv, &temperatura_solo) == 7) {
+      if (sscanf(dado.c_str(), "Identificador: %[^,], Temperatura: %f, Umidade: %f, Umidade_Solo: %f, Intensidade_Luz: %d, Intensidade_UV: %d, Temperatura_Solo: %f",
+                 identificador, &temperatura, &umidade, &umidade_solo, &intensidade_luz, &intensidade_uv, &temperatura_solo) == 7) {
 
-            JsonObject item = respostasFormatadas.createNestedObject();
-            item["identifier"] = identificador;
-            JsonObject valores = item.createNestedObject("values");
-            valores["temperature"] = temperatura;
-            valores["humidity"] = umidade;
-            valores["soil_humidity"] = umidade_solo;
-            valores["light"] = intensidade_luz;
-            valores["uv_intensity"] = intensidade_uv;
-            valores["soil_temperature"] = temperatura_solo;
-        }
+        JsonObject item = respostasFormatadas.createNestedObject();
+        item["identifier"] = identificador;
+        JsonObject valores = item.createNestedObject("values");
+        valores["temperature"] = temperatura;
+        valores["humidity"] = umidade;
+        valores["soil_humidity"] = umidade_solo;
+        valores["light"] = intensidade_luz;
+        valores["uv_intensity"] = intensidade_uv;
+        valores["soil_temperature"] = temperatura_solo;
+      }
     }
 
     if (mqttClient.state() != MQTT_CONNECTED) {
-        Serial.println("Conexão MQTT perdida. Tentando reconectar...");
-        connectAWS();
+      Serial.println("Conexão MQTT perdida. Tentando reconectar...");
+      connectAWS();
     }
 
     String jsonString;
@@ -279,17 +276,22 @@ void loop() {
     Serial.println(jsonString);
 
     if (!mqttClient.publish(publishTopic, jsonString.c_str())) {
-        Serial.print("Falha ao publicar no tópico MQTT. Estado MQTT: ");
-        Serial.println(mqttClient.state());
-        Serial.print("Tópico: ");
-        Serial.println(publishTopic);
-        Serial.print("Payload: ");
-        Serial.println(jsonString);
+      Serial.print("Falha ao publicar no tópico MQTT. Estado MQTT: ");
+      Serial.println(mqttClient.state());
+      Serial.print("Tópico: ");
+      Serial.println(publishTopic);
+      Serial.print("Payload: ");
+      Serial.println(jsonString);
     } else {
-        Serial.println("Dados publicados no AWS IoT com sucesso.");
+      Serial.println("Dados publicados no AWS IoT com sucesso.");
     }
+
+    coletaEmProgresso = false;
+    tempoUltimoEnvio = tempoAtual;
   }
 
+  // Processa as mensagens MQTT
   mqttClient.loop();
+
   delay(10);
 }
