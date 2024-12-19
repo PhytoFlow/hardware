@@ -101,23 +101,27 @@ NodeMCU -->|Válvulas| Irrigação
 
 ### JSON Enviado para a AWS
 ```json
-{
-  "dispositivo": "A1",
-  "umidade_solo": 45.3,
-  "temperatura_solo": 22.1,
-  "umidade_ar": 50.2,
-  "temperatura_ar": 28.3,
-  "intensidade_luz": 700,
-  "uv_index": 3.5
-}
+[
+  {
+    "identifier": "A1",
+    "values": {
+      "umidity": 60.2,
+      "temperature": 28.3,
+      "soil_humidity": 45.1,
+      "light": 700,
+      "uv_intensity": 2.5
+      "soil_temperature": 22.3,
+    }
+  }
+]
 ```
 
 ### Comando de Irrigação Recebido
 ```json
 {
-  "dispositivo": "A1",
-  "acao": "AGOAR",
-  "duracao": 120000
+  "identifier": "A1",
+  "comand": "AGOAR",
+  "time": 120000
 }
 ```
 
