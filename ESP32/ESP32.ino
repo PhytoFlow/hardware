@@ -275,6 +275,10 @@ void loop() {
     Serial.println("Respostas formatadas em JSON:");
     Serial.println(jsonString);
 
+    if (jsonString.isEmpty() || jsonString == "[]") {
+      return;
+    }
+
     if (!mqttClient.publish(publishTopic, jsonString.c_str())) {
       Serial.print("Falha ao publicar no tópico MQTT. Estado MQTT: ");
       Serial.println(mqttClient.state());
