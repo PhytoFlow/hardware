@@ -17,14 +17,20 @@ Bem-vindo ao repositório do PythoFlow, um sistema integrado para controle autom
   - **DHT22**: Umidade e temperatura do ar.
   - **Fotoresistor**: Intensidade da luz.
   - **GUVA-S12SD**: Índice de radiação UV.
+- **Ligações arduino**:
+  - Obs.: As portas RX do arduino ligam na TX do ESP8266 NodeMCU. A TX do arduino liga na RX do ESP8266 NodeMCU. E ambos conectam seus GND no GND do outro.
+![image](https://github.com/user-attachments/assets/5b286a27-7f49-42e3-89e3-e9d60abafa4d)
+![image](https://github.com/user-attachments/assets/55de40ec-a074-443e-b208-223f0bb8f094)
+
+
 
 #### Exemplo de Fluxo de Dados
 ```mermaid
 sequenceDiagram
-ESP32->>NodeMCU: Comando DADOS (UDP)
+ESP32->>NodeMCU: Solicita os dados (UDP)
 NodeMCU->>Arduino: Solicita leituras dos sensores
 Arduino->>NodeMCU: Envia dados coletados
-NodeMCU->>ESP32: Retorna dados via UDP
+NodeMCU->>ESP32: Retorna dados (UDP)
 ESP32->>AWS: Envia dados em JSON via MQTT
 ```
 
@@ -53,8 +59,8 @@ NodeMCU Específico->>Válvula Solenóide: Ativar fluxo de água
    - Orquestra comandos na rede local.
 
 2. **ESP8266 (NodeMCU)**:
-   - Interage com os Arduinos e ESP32.
-   - Lê dados de sensores e aciona válvulas.
+   - Interage com o Arduino e ESP32.
+   - Recebe e envia dados e aciona válvulas.
 
 3. **Arduino**:
    - Lê sensores analógicos e digitais.
@@ -65,17 +71,17 @@ NodeMCU Específico->>Válvula Solenóide: Ativar fluxo de água
 graph LR
 ESP32 -- MQTT --> AWS
 ESP32 -- UDP --> NodeMCU
-NodeMCU -- Serial --> Arduino
-Arduino -->|Sensores| NodeMCU
-NodeMCU -->|Válvulas| Irrigação
+NodeMCU -- TX/RX --> Arduino
+Arduino -->|TX/RX| NodeMCU
+NodeMCU -->|Irrigação| Válvulas
 ```
 
 ## Requisitos
 
 ### Hardware
 - ESP32.
-- NodeMCU (ESP8266).
-- Arduino Uno ou similar.
+- ESP8266 NodeMCU.
+- Arduino Uno.
 - Sensores (HL-69, DS18B20, DHT22, GUVA-S12SD, Fotoresistor).
 - Válvulas solenóides.
 
@@ -84,7 +90,7 @@ NodeMCU -->|Válvulas| Irrigação
 - Biblioteca MQTT.
 - Configuração de rede Wi-Fi.
 
-## Como Usar
+## Modo de Uso
 
 1. **Configurar o Hardware**:
    - Conecte os sensores ao Arduino conforme o esquemático.
