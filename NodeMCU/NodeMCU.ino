@@ -14,7 +14,7 @@ const String identity = "A1";
 char incomingPacket[255];
 String comandoRecebido;
 
-const int pinoAgoar = D8;
+const int pinoAguar = D8;
 
 void setup() {
   Serial.begin(9600);
@@ -28,8 +28,8 @@ void setup() {
 
   udp.begin(porta);
 
-  pinMode(pinoAgoar, OUTPUT);
-  digitalWrite(pinoAgoar, LOW);
+  pinMode(pinoAguar, OUTPUT);
+  digitalWrite(pinoAguar, LOW);
 }
 
 void loop() {
@@ -59,10 +59,10 @@ void loop() {
 
       if (!error) {
         const char* comand = doc["comand"];
-        if (comand && String(comand) == "AGOAR") {
+        if (comand && String(comand) == "AGUAR") {
           int tempo = doc["time"];
           if (tempo > 0) {
-            AgoarSetor(tempo);
+            AguarSetor(tempo);
           }
         }
       } else {
@@ -109,15 +109,15 @@ void EnviarDadosESP32(String respostaArduino){
   }
 }
 
-void AgoarSetor(int tempo) {
+void AguarSetor(int tempo) {
   // Ativa a "semeadura" (buzzer)
-  digitalWrite(pinoAgoar, HIGH);
-  Serial.println("Agoar ativado!");
+  digitalWrite(pinoAguar, HIGH);
+  Serial.println("Aguar ativado!");
 
   // Aguarda pelo tempo especificado
   delay(tempo);
 
   // Desativa a "semeadura" (buzzer)
-  digitalWrite(pinoAgoar, LOW);
-  Serial.println("Agoar desativado.");
+  digitalWrite(pinoAguar, LOW);
+  Serial.println("Aguar desativado.");
 }
