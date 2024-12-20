@@ -116,9 +116,9 @@ void messageReceived(char* topic, byte* payload, unsigned int length) {
     return;
   }
 
-  if (doc.containsKey("identifier") && doc.containsKey("comand") && doc.containsKey("time")) {
+  if (doc.containsKey("identifier") && doc.containsKey("command") && doc.containsKey("time")) {
     const char* identifier = doc["identifier"];
-    const char* comand = doc["comand"];
+    const char* comand = doc["command"];
     unsigned long time = doc["time"];
 
     if (strcmp(comand, "AGOAR") == 0) {
