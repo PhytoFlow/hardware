@@ -121,7 +121,7 @@ void messageReceived(char* topic, byte* payload, unsigned int length) {
     const char* comand = doc["command"];
     unsigned long time = doc["time"];
 
-    if (strcmp(comand, "AGOAR") == 0) {
+    if (strcmp(comand, "AGUAR") == 0) {
 
       String IPNodeMcu = identificarNodemcusNaRede(identifier);
 
