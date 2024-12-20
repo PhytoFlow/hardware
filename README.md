@@ -126,7 +126,7 @@ NodeMCU -->|Irrigação| Válvulas
 ```json
 {
   "identifier": "A1",
-  "comand": "AGOAR",
+  "command": "AGOAR",
   "time": 120000
 }
 ```
