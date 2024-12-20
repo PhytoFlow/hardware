@@ -77,9 +77,8 @@ void loop() {
 String SolicitarDadosArduino(String comando){
   String respostaArduino = "";
 
-  Serial.println("DADOS"); // Solicita dados ao arduino
+  Serial.println("DADOS");
 
-  // Aguarda resposta do Arduino
   long startTime = millis();
   while (millis() - startTime < 3000) {
     if (Serial.available() > 0) {
@@ -96,10 +95,8 @@ void EnviarDadosESP32(String respostaArduino){
     Serial.print("Resposta do Arduino: ");
     Serial.println(respostaArduino);
 
-    // Adiciona o identificador (identity) à mensagem antes de enviar
     String messageToSend = "Identificador: " + identity + ", " + respostaArduino;
 
-    // Envia a resposta de volta ao ESP32
     udp.beginPacket(udp.remoteIP(), udp.remotePort());
     udp.write(messageToSend.c_str());
     udp.endPacket();
@@ -110,14 +107,11 @@ void EnviarDadosESP32(String respostaArduino){
 }
 
 void AguarSetor(int tempo) {
-  // Ativa a "semeadura" (buzzer)
   digitalWrite(pinoAguar, HIGH);
   Serial.println("Aguar ativado!");
 
-  // Aguarda pelo tempo especificado
   delay(tempo);
 
-  // Desativa a "semeadura" (buzzer)
   digitalWrite(pinoAguar, LOW);
   Serial.println("Aguar desativado.");
 }
